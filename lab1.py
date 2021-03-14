@@ -1,3 +1,6 @@
+#!/Users/monal/CS373/bin/python3
+
+# Delete the shebang for your use, I had a virtual environment set up for my CS373 class so I'm using that.
 
 import os
 import numpy as np
@@ -7,84 +10,108 @@ from tensorflow.keras.utils import to_categorical
 import random
 
 
-# Setting random seeds to keep everything deterministic.
 random.seed(1618)
 np.random.seed(1618)
 #tf.set_random_seed(1618)   # Uncomment for TF1.
 tf.random.set_seed(1618)
 
-# Disable some troublesome logging.
 #tf.logging.set_verbosity(tf.logging.ERROR)   # Uncomment for TF1.
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-# Information on dataset.
-NUM_CLASSES = 10
-IMAGE_SIZE = 784
+# ALGORITHM = "guesser"
+ALGORITHM = "tf_net"
+#ALGORITHM = "tf_conv"
 
-# Use these to set the algorithm to use.
-ALGORITHM = "guesser"
-#ALGORITHM = "custom_net"
-#ALGORITHM = "tf_net"
+# DATASET = "mnist_d"
+# DATASET = "mnist_f"
+# DATASET = "cifar_10"
+# DATASET = "cifar_100_f"
+DATASET = "cifar_100_c"
 
-
-
-
-
-class NeuralNetwork_2Layer():
-    def __init__(self, inputSize, outputSize, neuronsPerLayer, learningRate = 0.1):
-        self.inputSize = inputSize
-        self.outputSize = outputSize
-        self.neuronsPerLayer = neuronsPerLayer
-        self.lr = learningRate
-        self.W1 = np.random.randn(self.inputSize, self.neuronsPerLayer)
-        self.W2 = np.random.randn(self.neuronsPerLayer, self.outputSize)
-
-    # Activation function.
-    def __sigmoid(self, x):
-        pass   #TODO: implement
-
-    # Activation prime function.
-    def __sigmoidDerivative(self, x):
-        pass   #TODO: implement
-
-    # Batch generator for mini-batches. Not randomized.
-    def __batchGenerator(self, l, n):
-        for i in range(0, len(l), n):
-            yield l[i : i + n]
-
-    # Training with backpropagation.
-    def train(self, xVals, yVals, epochs = 100000, minibatches = True, mbs = 100):
-        pass                                   #TODO: Implement backprop. allow minibatches. mbs should specify the size of each minibatch.
-
-    # Forward pass.
-    def __forward(self, input):
-        layer1 = self.__sigmoid(np.dot(input, self.W1))
-        layer2 = self.__sigmoid(np.dot(layer1, self.W2))
-        return layer1, layer2
-
-    # Predict.
-    def predict(self, xVals):
-        _, layer2 = self.__forward(xVals)
-        return layer2
+if DATASET == "mnist_d":
+    NUM_CLASSES = 10
+    IH = 28
+    IW = 28
+    IZ = 1
+    IS = 784
+elif DATASET == "mnist_f":
+    NUM_CLASSES = 10
+    IH = 28
+    IW = 28
+    IZ = 1
+    IS = 784
+elif DATASET == "cifar_10":
+    NUM_CLASSES = 10
+    IH = 32
+    IW = 32
+    IZ = 3
+    IS = 3072
+                   # TODO: Add this case.
+elif DATASET == "cifar_100_f":
+    NUM_CLASSES = 100
+    IH = 32
+    IW = 32
+    IZ = 3
+    IS = 3072
+                                     # TODO: Add this case.
+elif DATASET == "cifar_100_c":
+    NUM_CLASSES = 20
+    IH = 32
+    IW = 32
+    IZ = 3
+    IS = 3072                                 # TODO: Add this case.
 
 
+#=========================<Classifier Functions>================================
 
-# Classifier that just guesses the class label.
 def guesserClassifier(xTest):
     ans = []
     for entry in xTest:
-        pred = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        pred = [0] * NUM_CLASSES
         pred[random.randint(0, 9)] = 1
         ans.append(pred)
     return np.array(ans)
 
 
+def buildTFNeuralNet(x, y, eps = 6):
+    model = keras.Sequential()
+    model.add(keras.layers.Dense(256, activation=tf.nn.leaky_relu))
+    model.add(keras.layers.Dense(128, activation=tf.nn.leaky_relu))
+    model.add(keras.layers.Dense(64, activation=tf.nn.leaky_relu))
+    model.add(keras.layers.Dense(64, activation=tf.nn.leaky_relu))
+    model.add(keras.layers.Dense(NUM_CLASSES, activation=tf.nn.softmax))
+    model.compile(optimizer='adam', loss=keras.losses.categorical_crossentropy, metrics=['accuracy'])
+    model.fit(x, y, epochs=eps)
+    return model
+
+
+def buildTFConvNet(x, y, eps = 10, dropout = True, dropRate = 0.2):
+    pass        #TODO: Implement a CNN here. dropout option is required.
+    return None
 
 #=========================<Pipeline Functions>==================================
 
 def getRawData():
-    mnist = tf.keras.datasets.mnist
-    (xTrain, yTrain), (xTest, yTest) = mnist.load_data()
+    if DATASET == "mnist_d":
+        mnist = tf.keras.datasets.mnist
+        (xTrain, yTrain), (xTest, yTest) = mnist.load_data()
+    elif DATASET == "mnist_f":
+        mnist = tf.keras.datasets.fashion_mnist
+        (xTrain, yTrain), (xTest, yTest) = mnist.load_data()
+    elif DATASET == "cifar_10":
+        cifar = tf.keras.datasets.cifar10
+        (xTrain, yTrain), (xTest, yTest) = cifar.load_data()
+              # TODO: Add this case.
+    elif DATASET == "cifar_100_f":
+        cifar = tf.keras.datasets.cifar100
+        (xTrain, yTrain), (xTest, yTest) = cifar.load_data(label_mode='fine')      # TODO: Add this case.
+    elif DATASET == "cifar_100_c":
+        cifar = tf.keras.datasets.cifar100
+        (xTrain, yTrain), (xTest, yTest) = cifar.load_data(label_mode='coarse')
+              # TODO: Add this case.
+    else:
+        raise ValueError("Dataset not recognized.")
+    print("Dataset: %s" % DATASET)
     print("Shape of xTrain dataset: %s." % str(xTrain.shape))
     print("Shape of yTrain dataset: %s." % str(yTrain.shape))
     print("Shape of xTest dataset: %s." % str(xTest.shape))
@@ -94,14 +121,20 @@ def getRawData():
 
 
 def preprocessData(raw):
-    ((xTrain, yTrain), (xTest, yTest)) = raw            #TODO: Add range reduction here (0-255 ==> 0.0-1.0).
+    ((xTrain, yTrain), (xTest, yTest)) = raw
+    if ALGORITHM != "tf_conv":
+        xTrainP = xTrain.reshape((xTrain.shape[0], IS))
+        xTestP = xTest.reshape((xTest.shape[0], IS))
+    else:
+        xTrainP = xTrain.reshape((xTrain.shape[0], IH, IW, IZ))
+        xTestP = xTest.reshape((xTest.shape[0], IH, IW, IZ))
     yTrainP = to_categorical(yTrain, NUM_CLASSES)
     yTestP = to_categorical(yTest, NUM_CLASSES)
-    print("New shape of xTrain dataset: %s." % str(xTrain.shape))
-    print("New shape of xTest dataset: %s." % str(xTest.shape))
+    print("New shape of xTrain dataset: %s." % str(xTrainP.shape))
+    print("New shape of xTest dataset: %s." % str(xTestP.shape))
     print("New shape of yTrain dataset: %s." % str(yTrainP.shape))
     print("New shape of yTest dataset: %s." % str(yTestP.shape))
-    return ((xTrain, yTrainP), (xTest, yTestP))
+    return ((xTrainP, yTrainP), (xTestP, yTestP))
 
 
 
@@ -109,14 +142,12 @@ def trainModel(data):
     xTrain, yTrain = data
     if ALGORITHM == "guesser":
         return None   # Guesser has no model, as it is just guessing.
-    elif ALGORITHM == "custom_net":
-        print("Building and training Custom_NN.")
-        print("Not yet implemented.")                   #TODO: Write code to build and train your custon neural net.
-        return None
     elif ALGORITHM == "tf_net":
         print("Building and training TF_NN.")
-        print("Not yet implemented.")                   #TODO: Write code to build and train your keras neural net.
-        return None
+        return buildTFNeuralNet(xTrain, yTrain, 15)
+    elif ALGORITHM == "tf_conv":
+        print("Building and training TF_CNN.")
+        return buildTFConvNet(xTrain, yTrain)
     else:
         raise ValueError("Algorithm not recognized.")
 
@@ -125,20 +156,28 @@ def trainModel(data):
 def runModel(data, model):
     if ALGORITHM == "guesser":
         return guesserClassifier(data)
-    elif ALGORITHM == "custom_net":
-        print("Testing Custom_NN.")
-        print("Not yet implemented.")                   #TODO: Write code to run your custon neural net.
-        return None
     elif ALGORITHM == "tf_net":
         print("Testing TF_NN.")
-        print("Not yet implemented.")                   #TODO: Write code to run your keras neural net.
-        return None
+        preds = model.predict(data)
+        for i in range(preds.shape[0]):
+            oneHot = [0] * NUM_CLASSES
+            oneHot[np.argmax(preds[i])] = 1
+            preds[i] = oneHot
+        return preds
+    elif ALGORITHM == "tf_conv":
+        print("Testing TF_CNN.")
+        preds = model.predict(data)
+        for i in range(preds.shape[0]):
+            oneHot = [0] * NUM_CLASSES
+            oneHot[np.argmax(preds[i])] = 1
+            preds[i] = oneHot
+        return preds
     else:
         raise ValueError("Algorithm not recognized.")
 
 
 
-def evalResults(data, preds):   #TODO: Add F1 score confusion matrix here.
+def evalResults(data, preds):
     xTest, yTest = data
     acc = 0
     for i in range(preds.shape[0]):
