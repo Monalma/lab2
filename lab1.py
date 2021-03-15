@@ -9,24 +9,23 @@ from tensorflow import keras
 from tensorflow.keras.utils import to_categorical
 import random
 
-
 random.seed(1618)
 np.random.seed(1618)
-#tf.set_random_seed(1618)   # Uncomment for TF1.
+# tf.set_random_seed(1618)   # Uncomment for TF1.
 tf.random.set_seed(1618)
 
-#tf.logging.set_verbosity(tf.logging.ERROR)   # Uncomment for TF1.
+# tf.logging.set_verbosity(tf.logging.ERROR)   # Uncomment for TF1.
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 # ALGORITHM = "guesser"
-ALGORITHM = "tf_net"
-#ALGORITHM = "tf_conv"
+# ALGORITHM = "tf_net"
+ALGORITHM = "tf_conv"
 
 # DATASET = "mnist_d"
 # DATASET = "mnist_f"
-# DATASET = "cifar_10"
+DATASET = "cifar_10"
 # DATASET = "cifar_100_f"
-DATASET = "cifar_100_c"
+# DATASET = "cifar_100_c"
 
 if DATASET == "mnist_d":
     NUM_CLASSES = 10
@@ -46,23 +45,23 @@ elif DATASET == "cifar_10":
     IW = 32
     IZ = 3
     IS = 3072
-                   # TODO: Add this case.
+    # TODO: Add this case.
 elif DATASET == "cifar_100_f":
     NUM_CLASSES = 100
     IH = 32
     IW = 32
     IZ = 3
     IS = 3072
-                                     # TODO: Add this case.
+    # TODO: Add this case.
 elif DATASET == "cifar_100_c":
     NUM_CLASSES = 20
     IH = 32
     IW = 32
     IZ = 3
-    IS = 3072                                 # TODO: Add this case.
+    IS = 3072  # TODO: Add this case.
 
 
-#=========================<Classifier Functions>================================
+# =========================<Classifier Functions>================================
 
 def guesserClassifier(xTest):
     ans = []
@@ -73,7 +72,7 @@ def guesserClassifier(xTest):
     return np.array(ans)
 
 
-def buildTFNeuralNet(x, y, eps = 6):
+def buildTFNeuralNet(x, y, eps=6):
     model = keras.Sequential()
     model.add(keras.layers.Dense(256, activation=tf.nn.leaky_relu))
     model.add(keras.layers.Dense(128, activation=tf.nn.leaky_relu))
@@ -85,11 +84,51 @@ def buildTFNeuralNet(x, y, eps = 6):
     return model
 
 
-def buildTFConvNet(x, y, eps = 10, dropout = True, dropRate = 0.2):
-    pass        #TODO: Implement a CNN here. dropout option is required.
-    return None
+def buildTFConvNet(x, y, eps=10, dropout=True, dropRate=0.2):
+    model = keras.Sequential()
+    model.add(tf.keras.layers.Conv2D(32, (3, 3), activation=tf.nn.leaky_relu, padding="same", input_shape=(IH, IW, IZ)))
+    model.add(tf.keras.layers.BatchNormalization())
+    model.add(tf.keras.layers.Conv2D(32, (3, 3), activation=tf.nn.leaky_relu, padding="same"))
+    model.add(tf.keras.layers.MaxPooling2D((2, 2)))
+    if dropout:
+        model.add(tf.keras.layers.Dropout(dropRate))
 
-#=========================<Pipeline Functions>==================================
+    model.add(tf.keras.layers.Conv2D(64, (3, 3), activation=tf.nn.leaky_relu, padding="same"))
+    model.add(tf.keras.layers.MaxPooling2D((2, 2)))
+    model.add(tf.keras.layers.Conv2D(64, (3, 3), activation=tf.nn.leaky_relu, padding="same"))
+    model.add(tf.keras.layers.MaxPooling2D((2, 2)))
+    if dropout:
+        model.add(tf.keras.layers.Dropout(dropRate))
+
+    model.add(tf.keras.layers.Conv2D(128, (3, 3), activation=tf.nn.leaky_relu, padding="same"))
+    model.add(tf.keras.layers.BatchNormalization())
+    model.add(tf.keras.layers.Conv2D(128, (3, 3), activation=tf.nn.leaky_relu, padding="same"))
+    model.add(tf.keras.layers.MaxPooling2D((2, 2)))
+    if dropout:
+        model.add(tf.keras.layers.Dropout(dropRate))
+
+    model.add(tf.keras.layers.Conv2D(256, (3, 3), activation=tf.nn.leaky_relu, padding="same"))
+    model.add(tf.keras.layers.BatchNormalization())
+    model.add(tf.keras.layers.Conv2D(256, (3, 3), activation=tf.nn.leaky_relu, padding="same"))
+
+    if DATASET == "cifar_10" or DATASET == "cifar_100_f" or DATASET == "cifar_100_c":
+        model.add(tf.keras.layers.MaxPooling2D((2, 2)))
+    if dropout:
+        model.add(tf.keras.layers.Dropout(dropRate))
+
+    model.add(tf.keras.layers.Flatten())
+
+
+    model.add(tf.keras.layers.Dense(256, activation=tf.nn.leaky_relu))
+    model.add(tf.keras.layers.Dense(NUM_CLASSES, activation=tf.nn.softmax))
+
+    model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+
+    model.fit(x, np.argmax(y, axis=1), batch_size=256, epochs=20, verbose=1)
+    return model
+
+
+# =========================<Pipeline Functions>==================================
 
 def getRawData():
     if DATASET == "mnist_d":
@@ -101,14 +140,14 @@ def getRawData():
     elif DATASET == "cifar_10":
         cifar = tf.keras.datasets.cifar10
         (xTrain, yTrain), (xTest, yTest) = cifar.load_data()
-              # TODO: Add this case.
+        # TODO: Add this case.
     elif DATASET == "cifar_100_f":
         cifar = tf.keras.datasets.cifar100
-        (xTrain, yTrain), (xTest, yTest) = cifar.load_data(label_mode='fine')      # TODO: Add this case.
+        (xTrain, yTrain), (xTest, yTest) = cifar.load_data(label_mode='fine')  # TODO: Add this case.
     elif DATASET == "cifar_100_c":
         cifar = tf.keras.datasets.cifar100
         (xTrain, yTrain), (xTest, yTest) = cifar.load_data(label_mode='coarse')
-              # TODO: Add this case.
+        # TODO: Add this case.
     else:
         raise ValueError("Dataset not recognized.")
     print("Dataset: %s" % DATASET)
@@ -117,7 +156,6 @@ def getRawData():
     print("Shape of xTest dataset: %s." % str(xTest.shape))
     print("Shape of yTest dataset: %s." % str(yTest.shape))
     return ((xTrain, yTrain), (xTest, yTest))
-
 
 
 def preprocessData(raw):
@@ -137,11 +175,10 @@ def preprocessData(raw):
     return ((xTrainP, yTrainP), (xTestP, yTestP))
 
 
-
 def trainModel(data):
     xTrain, yTrain = data
     if ALGORITHM == "guesser":
-        return None   # Guesser has no model, as it is just guessing.
+        return None  # Guesser has no model, as it is just guessing.
     elif ALGORITHM == "tf_net":
         print("Building and training TF_NN.")
         return buildTFNeuralNet(xTrain, yTrain, 15)
@@ -150,7 +187,6 @@ def trainModel(data):
         return buildTFConvNet(xTrain, yTrain)
     else:
         raise ValueError("Algorithm not recognized.")
-
 
 
 def runModel(data, model):
@@ -176,7 +212,6 @@ def runModel(data, model):
         raise ValueError("Algorithm not recognized.")
 
 
-
 def evalResults(data, preds):
     xTest, yTest = data
     acc = 0
@@ -188,8 +223,7 @@ def evalResults(data, preds):
     print()
 
 
-
-#=========================<Main>================================================
+# =========================<Main>================================================
 
 def main():
     raw = getRawData()
@@ -197,7 +231,6 @@ def main():
     model = trainModel(data[0])
     preds = runModel(data[1][0], model)
     evalResults(data[1], preds)
-
 
 
 if __name__ == '__main__':
